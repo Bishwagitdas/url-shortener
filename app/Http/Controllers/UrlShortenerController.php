@@ -1,84 +1,93 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use App\Models\ShortenedUrl;
 use App\Models\ClickLog;
-use Carbon\Carbon;
 
 class UrlShortenerController extends Controller
 {
     public function index()
     {
-        $urls = ShortenedUrl::orderBy('created_at', 'desc')->get();
+        $urls = ShortenedUrl::orderBy('created_at', 'desc')->paginate(10);
         return view('home', compact('urls'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'url' => 'required|url|max:2048',
+            'url' => 'required|url|max:2048'
         ]);
 
-        // Check if the URL already exists
-        $existing = ShortenedUrl::where('original_url', $request->url)->first();
-        if ($existing) {
-            return redirect()->back()->with('short_url', url($existing->short_code));
+        // Blacklist domains
+        $blacklistedDomains = ['example.com', 'malicious-site.com'];
+        $url = parse_url($request->url, PHP_URL_HOST);
+
+        if (in_array($url, $blacklistedDomains)) {
+            return redirect()->back()->with('error', 'This URL belongs to a blacklisted domain.');
         }
 
-        // Generate unique short code
-        do {
-            $shortCode = Str::random(6);
-        } while (ShortenedUrl::where('short_code', $shortCode)->exists());
+        // Check if the URL is already shortened
+        $existingUrl = ShortenedUrl::where('original_url', $request->url)->first();
 
-        // Create shortened URL entry
-        $shortened = ShortenedUrl::create([
-            'original_url' => $request->url,
-            'short_code' => $shortCode,
-            'clicks' => 0,
-            'expires_at' => Carbon::now()->addDays(30), // 30 days expiration
-        ]);
+        if ($existingUrl) {
+            return redirect()->back()->with('error', 'This URL has already been shortened.');
+        }
 
-        return redirect()->back()->with('short_url', url($shortened->short_code));
+        try {
+            // Generate or retrieve the shortened URL
+            $shortened = ShortenedUrl::generateOrRetrieve($request->url);
+            return redirect()->back()->with('success', 'URL shortened successfully! Shortened URL: ' . url($shortened->short_code));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to shorten the URL. Please try again.');
+        }
     }
 
     public function redirect($code)
     {
-        $shortened = ShortenedUrl::where('short_code', $code)->firstOrFail();
+        // $shortened = ShortenedUrl::findByCode($code);
+        $shortened = ShortenedUrl::where('short_code', $code)->first();
 
-        // Handle expired URL
-        if ($shortened->expires_at && now()->greaterThan($shortened->expires_at)) {
-            return response()->view('expired', ['code' => $code], 410);
+        if (!$shortened) {
+            return redirect()->route('url.index')->with('error', 'Link not found.');
         }
 
-        // Increment click count
-        $shortened->increment('clicks');
+        if ($shortened->isExpired()) {
+            return redirect()->route('url.index')->with('error', 'This link has expired.');
+        }
 
-        // Store analytics
-        ClickLog::create([
-            'short_url_id' => $shortened->id,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
+        // Increment clicks and log click
+        $shortened->incrementClicks();
+        ClickLog::logClick($shortened->id);
 
+        // Redirect to the original URL
         return redirect()->away($shortened->original_url);
     }
 
     public function analytics($code)
     {
-        $shortened = ShortenedUrl::where('short_code', $code)->firstOrFail();
-        $clicks = ClickLog::where('short_url_id', $shortened->id)->latest()->get();
-
+        $shortened = ShortenedUrl::findByCode($code);
+        $clicks = ClickLog::getClicksByShortUrlId($shortened->id);
         return view('analytics', compact('shortened', 'clicks'));
     }
 
     public function destroy($id)
     {
-    $shortened = ShortenedUrl::findOrFail($id);
-    $shortened->delete();
+        try {
+            $shortenedUrl = ShortenedUrl::find($id);
 
-    return redirect()->back()->with('success', 'Shortened URL deleted successfully.');
+            if (!$shortenedUrl) {
+                return redirect()->back()->with('error', 'Shortened URL not found.');
+            }
+
+            // Delete the shortened URL
+            $shortenedUrl->delete();
+
+            return redirect()->back()->with('success', 'Shortened URL deleted successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting shortened URL: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while deleting the URL.');
+        }
     }
 }
-
