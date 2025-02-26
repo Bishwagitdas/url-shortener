@@ -47,19 +47,13 @@ class ShortenedUrl extends Model
 
     }
 
-    public static function deleteById($id)
-    {
-        $shortened = self::find($id);
-        return $shortened ? $shortened->delete() : false;
-    }
-
     public static function prepareShortUrlData($url)
     {
         return [
             'original_url' => $url,
             'short_code' => self::generateUniqueShortCode(),
             'clicks' => 0,
-            'expires_at' => Carbon::now('UTC')->addDays(30),
+            'expires_at' => Carbon::now()->addDays(30),
         ];
     }
 }

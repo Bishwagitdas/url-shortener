@@ -29,9 +29,6 @@
 
         <h4 class="text-center mt-4">Shortened URLs</h4>
 
-        @if($urls->isEmpty())
-            <p class="text-center">No data found.</p>
-        @else
             <table class="table table-bordered text-center">
                 <thead class="table-dark">
                     <tr>
@@ -43,6 +40,11 @@
                     </tr>
                 </thead>
                 <tbody>
+                @if($urls->isEmpty())
+                    <tr>
+                        <td colspan="3" class="text-center">No data found.</td>
+                    </tr>
+                @else
                     @foreach($urls as $url)
                     <tr>
                         <td>{{ $url->original_url }}</td>
@@ -59,9 +61,9 @@
                         </td>
                     </tr>
                     @endforeach
+                @endif
                 </tbody>
             </table>
-        @endif
         <!-- Pagination Links -->
         <div class="d-flex justify-content-center">
             <div class="pagination-container">
