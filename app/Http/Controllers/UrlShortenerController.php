@@ -46,7 +46,7 @@ class UrlShortenerController extends Controller
 
     public function redirect($code)
     {
-        // $shortened = ShortenedUrl::findByCode($code);
+
         $shortened = ShortenedUrl::where('short_code', $code)->first();
 
         if (!$shortened) {
@@ -54,14 +54,18 @@ class UrlShortenerController extends Controller
         }
 
         if ($shortened->isExpired()) {
-            return redirect()->route('url.index')->with('error', 'This link has expired.');
+            $perPage = 10;
+            $position = ShortenedUrl::orderBy('created_at', 'desc')->pluck('id')->search($shortened->id) + 1;
+            // Calculate the page number
+            $currentPage = ceil($position / $perPage);
+
+            return redirect()->route('url.index', ['page' => $currentPage])->with('error', 'This link has expired.');
         }
 
         // Increment clicks and log click
         $shortened->incrementClicks();
         ClickLog::logClick($shortened->id);
 
-        // Redirect to the original URL
         return redirect()->away($shortened->original_url);
     }
 
