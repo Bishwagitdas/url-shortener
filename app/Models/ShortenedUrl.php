@@ -13,10 +13,12 @@ class ShortenedUrl extends Model
 
     protected $fillable = ['original_url', 'short_code', 'clicks', 'expires_at'];
 
-    public static function generateOrRetrieve($url)
+    const DEFAULT_CLICKS = 0;
+    const EXPIRATION_DAYS = 30;
+
+    public static function createOrRetrieveShortUrl($url)
     {
-        $existing = self::where('original_url', $url)->first();
-        return $existing ?: self::create(self::prepareShortUrlData($url));
+       return self::firstOrCreate(['original_url' => $url], self::prepareShortUrlData($url));
     }
 
     private static function generateUniqueShortCode()
@@ -52,8 +54,8 @@ class ShortenedUrl extends Model
         return [
             'original_url' => $url,
             'short_code' => self::generateUniqueShortCode(),
-            'clicks' => 0,
-            'expires_at' => Carbon::now()->addDays(30),
+            'clicks' => self::DEFAULT_CLICKS,
+            'expires_at' => Carbon::now()->addDays(self::EXPIRATION_DAYS),
         ];
     }
 }

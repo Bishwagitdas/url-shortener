@@ -2,16 +2,18 @@
 
 @section('content')
 <div class="row justify-content-center">
-    <!-- Success and Error Alerts -->
-    @if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
-    @elseif(session('error'))
-    <div class="alert alert-danger">
-        {{ session('error') }}
-    </div>
-    @endif
+     <!-- Success and Error Alerts -->
+     @if(session('success'))
+     <div class="alert alert-success alert-dismissible fade show">
+         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+         {{ session('success') }}
+     </div>
+     @elseif(session('error'))
+     <div class="alert alert-danger alert-dismissible fade show">
+         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+         {{ session('error') }}
+     </div>
+     @endif
 
     <div class="col-md-12">
         <h2 class="text-center mb-4">URL Shortener</h2>
@@ -27,11 +29,12 @@
         </div>
         @endif
 
-        <h4 class="text-center mt-4">Shortened URLs</h4>
+        <h4 class="text-center mt-4">Shortened URLs:({{ $totalLinks }})</h4>
 
             <table class="table table-bordered text-center">
                 <thead class="table-dark">
                     <tr>
+                        <th>ID</th>
                         <th>Original URL</th>
                         <th>Short URL</th>
                         <th>Clicks</th>
@@ -42,11 +45,12 @@
                 <tbody>
                 @if($urls->isEmpty())
                     <tr>
-                        <td colspan="3" class="text-center">No data found.</td>
+                        <td colspan="6" class="text-center">No data found.</td>
                     </tr>
                 @else
-                    @foreach($urls as $url)
+                    @foreach($urls as $index => $url)
                     <tr>
+                        <td>{{ ($urls->currentPage() - 1) * $urls->perPage() + $loop->iteration }}</td>
                         <td>{{ $url->original_url }}</td>
                         <td><a href="{{ url($url->short_code) }}" target="_blank">{{ url($url->short_code) }}</a></td>
                         <td>{{ $url->clicks }}</td>

@@ -23,7 +23,7 @@ class UrlValidationService
 
         // Check if the domain is in the blacklist
         if (in_array($domain, $blacklistedDomains)) {
-            return 'This URL belongs to a blacklisted domain.';
+            return 'The URL "' . $url . '" belongs to a blacklisted domain.';
         }
 
         return null;

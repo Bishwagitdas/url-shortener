@@ -9,6 +9,7 @@
         <table class="table table-bordered text-center">
             <thead class="table-dark">
                 <tr>
+                    <th>ID</th>
                     <th>IP Address</th>
                     <th>User Agent</th>
                     <th>Created At</th>
@@ -16,12 +17,13 @@
             </thead>
             @if($urls->isEmpty())
                 <tr>
-                    <td colspan="3" class="text-center">No data found.</td>
+                    <td colspan="6" class="text-center">No data found.</td>
                 </tr>
             @else
                 <tbody>
-                    @foreach($urls as $click)
+                    @foreach($urls as $index =>$click)
                         <tr>
+                            <td>{{ ($urls->currentPage() - 1) * $urls->perPage() + $loop->iteration }}</td>
                             <td>{{ $click->ip_address }}</td>
                             <td>{{ $click->user_agent }}</td>
                             <td>{{ $click->created_at }}</td>

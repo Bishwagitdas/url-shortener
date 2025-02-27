@@ -3,7 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Illuminate\Http\Exceptions\ThrottleRequestsException;
+// use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -32,14 +32,14 @@ class Handler extends ExceptionHandler
         });
     }
 
-    public function render($request, Throwable $exception)
-    {
-        // Check if it's a TooManyRequestsHttpException
-        if ($exception instanceof ThrottleRequestsException) {
-            return redirect()->back()->with('error', 'You have exceeded the rate limit. Please try again in a minute.');
-        }
+    // public function render($request, Throwable $exception)
+    // {
 
-        // Default handler
-        return parent::render($request, $exception);
-    }
+    //     if ($exception instanceof ThrottleRequestsException) {
+    //         return redirect()->back()->with('error', 'You have exceeded the rate limit. Please try again in 1 minute.');
+    //     }
+
+    //     // Default handler
+    //     return parent::render($request, $exception);
+    // }
 }

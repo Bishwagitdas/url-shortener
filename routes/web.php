@@ -26,7 +26,7 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 Route::get('/', [UrlShortenerController::class, 'index'])->name('url.index');
 
 Route::prefix('url')->group(function () {
-    Route::post('/shorten', [UrlShortenerController::class, 'store'])->name('url.shorten')->middleware('throttle:2,1'); // 2 requests per minute
+    Route::post('/shorten', [UrlShortenerController::class, 'store'])->name('url.shorten'); // 2 requests per minute
     Route::get('/analytics/{code}', [UrlShortenerController::class, 'analytics'])->name('url.analytics');
     Route::delete('/{id}', [UrlShortenerController::class, 'destroy'])->name('url.delete');
 });

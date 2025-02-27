@@ -7,6 +7,7 @@ use App\Models\ShortenedUrl;
 use App\Models\ClickLog;
 use App\Services\UrlValidationService;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\DB;
 
 
 class UrlShortenerController extends Controller
@@ -22,7 +23,8 @@ class UrlShortenerController extends Controller
     public function index()
     {
         $urls = ShortenedUrl::orderBy('created_at', 'desc')->paginate(10);
-        return view('home', compact('urls'));
+        $totalLinks = ShortenedUrl::count();
+        return view('home', compact('urls','totalLinks'));
     }
 
     public function store(Request $request)
@@ -30,13 +32,13 @@ class UrlShortenerController extends Controller
         $ip = $request->ip();
         $key = 'url_shorten:' . $ip;
 
-        // Check if the rate limit is exceeded (2 requests per minute)
-        if (RateLimiter::remaining($key, 2) === 0) {
-            return redirect()->back()->with('error', 'Please try again in 1 minute.');
+        // Check if the rate limit is exceeded
+        if (RateLimiter::remaining($key, 5) === 0) {
+            return redirect()->back()->with('error', 'You have exceeded the rate limit. Please try again in 2 minute.');
         }
 
         // Increment the rate limit counter
-        RateLimiter::hit($key, 60);
+        RateLimiter::hit($key, 120);
 
         // Validate the input URL
         $request->validate([
@@ -48,7 +50,7 @@ class UrlShortenerController extends Controller
 
          // additional validation on the URL
          if (!$this->urlValidationService->isValidUrl($url)) {
-             return redirect()->back()->with('error', 'Please enter a valid URL.');
+             return redirect()->back()->with('error', 'This URL:"' . $request->url . '" is not valid, Please enter a valid URL.');
          }
 
         // Fetch the blacklisted domains from the config file
@@ -63,18 +65,18 @@ class UrlShortenerController extends Controller
 
         // Additional check: Ensure the URL is reachable
         if (!$this->urlValidationService->isReachableUrl($url)) {
-            return redirect()->back()->with('error', 'The URL is unreachable. Please check the URL and try again.');
+            return redirect()->back()->with('error',' This URL: "' . $request->url . '" is unreachable. Please check the URL and try again.');
         }
 
         $existingUrl = ShortenedUrl::where('original_url', $request->url)->first();
 
         if ($existingUrl) {
-            return redirect()->back()->with('error', 'This URL has already been shortened.');
+            return redirect()->back()->with('error', ' This URL: "' . $request->url . '" has already been shortened.');
         }
 
         try {
-            // Generate or retrieve the shortened URL
-            $shortened = ShortenedUrl::generateOrRetrieve($request->url);
+
+            $shortened = ShortenedUrl::createOrRetrieveShortUrl($request->url);
             return redirect()->back()->with('success', 'URL shortened successfully! Shortened URL: ' . url($shortened->short_code));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to shorten the URL. Please try again.');
@@ -83,8 +85,10 @@ class UrlShortenerController extends Controller
 
     public function redirect($code)
     {
-        // Find the shortened URL by the short code
-        $shortened = ShortenedUrl::where('short_code', $code)->first();
+        //stores mappings for 10 minutes
+        $shortened = cache()->remember("short_url:{$code}", 600, function () use ($code) {
+            return ShortenedUrl::where('short_code', $code)->first();
+        });
 
         if (!$shortened) {
             return redirect()->route('url.index')->with('error', 'Link not found.');
@@ -122,18 +126,21 @@ class UrlShortenerController extends Controller
 
     public function destroy($id)
     {
+        DB::beginTransaction();
         try {
             $shortenedUrl = ShortenedUrl::find($id);
 
             if (!$shortenedUrl) {
                 return redirect()->back()->with('error', 'Shortened URL not found.');
             }
-
-            // Delete the shortened URL
+            $shortUrl = $shortenedUrl->short_code;
             $shortenedUrl->delete();
 
-            return redirect()->back()->with('success', 'Shortened URL deleted successfully.');
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Shortened URL "' . url($shortUrl) . '" deleted successfully.');
         } catch (\Exception $e) {
+            DB::rollBack();
             \Log::error('Error deleting shortened URL: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while deleting the URL.');
         }

@@ -2,9 +2,8 @@
 
 return [
     'domains' => [
-        'example.com',
-        'www.aiub.edu',
-        'another-bad-site.com',
+        'www.youtube.com',
+        'www.facebook.com',
         // Add more domains to blacklist
     ],
 ];
