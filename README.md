@@ -8,6 +8,7 @@ The URL Shortener is a Laravel-based web application that allows users to shorte
 - Track analytics such as total clicks, IP address, and user agent.
 - View analytics for each shortened URL.
 - Delete URLs when no longer needed.
+- Caching for improved redirection performance.
 
 ## Installation & Setup
 ### Prerequisites
@@ -74,12 +75,6 @@ Ensure you have the following installed on your system:
 | `GET` | `/{code}` | Redirects to the original URL |
 | `GET` | `/url/analytics/{code}` | Displays analytics for a short URL |
 | `DELETE` | `/url/{id}` | Deletes a shortened URL |
-
-## Future Enhancements
-- Implement authentication for URL management.
-- Add user accounts to track personal URLs.
-- Implement caching for frequently accessed URLs.
-- Provide an API for external integrations.
 
 ## License
 This project is licensed under the MIT License.
